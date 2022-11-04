@@ -1,5 +1,9 @@
 // Scanner takes in raw source code as a series of characters and groups it into a series
 // of chunks called tokens ("words", and "punctuation" that make up the language's grammar)
+//
+// Each word is classified into a syntactic category (e.g. "number", "string", "identifier")
+//
+// Regular expressions are used to define the set of valid words in the source language
 
 use std::fs;
 use std::io::*;
