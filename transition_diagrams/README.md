@@ -7,7 +7,7 @@
 ![num_transition_diagram](https://user-images.githubusercontent.com/79671850/205413122-a1d9fe09-cb33-4e90-8cfb-6156ed0fc017.png)
 -------------
 ### Decimal Numbers ### 
-![decnum_transition_diagram](https://user-images.githubusercontent.com/79671850/205413261-cbfde313-5b83-4c64-8b24-005ddedc4af6.png)
+![decnum_transition_diagram](https://user-images.githubusercontent.com/79671850/205419455-a299e953-dce4-4850-835d-17f02705d3ac.png)
 -------------
 
 ### Hexadecimal Numbers ###
