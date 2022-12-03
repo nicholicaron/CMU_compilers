@@ -64,4 +64,5 @@
 -------------
 
 ### Postfix Operators ###
-![postop_transition_diagram](https://user-images.githubusercontent.com/79671850/205413391-ca353222-7686-40f8-8c18-d09aa65dff86.png)
+![postop_transition_diagram](https://user-images.githubusercontent.com/79671850/205419399-89a71620-730e-4b7c-a5be-0bf71f682dad.png)
+
