@@ -1,4 +1,4 @@
-# Transition Diagrams for C0's Lexical Tokens #
+# Transition Diagrams for C0's Finite Automata #
 
 ### Identifiers ### 
 ![id_transition_diagram](https://user-images.githubusercontent.com/79671850/205413010-df4bd206-a895-49c1-a560-17f361edb022.png)
