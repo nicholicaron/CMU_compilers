@@ -7,6 +7,7 @@
 
 use std::fs;
 use std::io::*;
+mod token;
 
 pub fn run_file(path: String) -> Result<()> {
     if let Ok(file) = fs::read_to_string(path) {
@@ -64,7 +65,7 @@ fn scan(source: String) -> Vec<Token> {
             // take_while takes possession of the original iterator, so we will instead borrow it mutable via by_ref()
             // elements consumed by take_while are also removed from original iterator so we don't have to worry about double counting
             '"' => {
-                let mut last_char_matched: char = '\0';
+                let mut last_char_matched: char;
 
                 let s: String = char_indices
                     .by_ref()
@@ -107,3 +108,19 @@ enum Token {
     StringLiteral(String),
     Invalid(String),
 }
+
+// identifier
+enum Id {
+
+}
+
+//
+enum Separator {
+    
+}
+
+enum UnOp{
+
+}
+
+enum 
