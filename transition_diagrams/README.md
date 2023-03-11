@@ -56,7 +56,8 @@
 -------------
 
 ### Binary Operators ###
-![binop_transition_diagram](https://user-images.githubusercontent.com/79671850/205413376-20dbbc47-325d-4ebf-9bfe-de92489dc4bf.png)
+![binop_transition_diagram](https://user-images.githubusercontent.com/79671850/224458998-7dca36e4-d9a5-4525-ae44-9b34dbe5a80c.png)
+
 -------------
 
 ### Assignment Operators ###
