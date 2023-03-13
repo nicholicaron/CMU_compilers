@@ -1,6 +1,6 @@
+mod scanner;
+
 use clap::{App, Arg};
-pub mod parser;
-pub mod scanner;
 
 fn main() {
     let matches = App::new("C0mpiler")

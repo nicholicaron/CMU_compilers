@@ -1,69 +1,82 @@
+#[derive(PartialEq)]
 pub enum Token {
-    Id,
-    Num,
-    StrLit,
-    ChrLit,
-    LibLit,
+    Id(Id),
+    Num(Num),
+    StrLit(StrLit),
+    ChrLit(ChrLit),
+    LibLit(LibLit),
     // How to differentiate between SChar::Esc and CChar::Esc?
-    SChar,
-    CChar,
-    Sep,
-    UnOp,
-    BinOp,
-    AsnOp,
-    PostOp,
+    SChar(SChar),
+    CChar(CChar),
+    Sep(Sep),
+    UnOp(UnOp),
+    BinOp(BinOp),
+    AsnOp(AsnOp),
+    PostOp(PostOp),
 }
 
+#[derive(PartialEq)]
 enum Id {
     Identifier(String),
 }
 
+#[derive(PartialEq)]
 enum Num {
     DecNum,
     HexNum,
 }
 
+#[derive(PartialEq)]
 enum DecNum {
     DecNumber(u32),
 }
 
+#[derive(PartialEq)]
 enum HexNum {
     // implicit conversion from base-16 to decimal
     HexNumber(u32),
 }
 
+#[derive(PartialEq)]
 enum StrLit {
     StringLiteral(String),
 }
 
+#[derive(PartialEq)]
 enum ChrLit {
     CharacterLiteral(char),
 }
 
+#[derive(PartialEq)]
 enum LibLit {
     LibraryLiteral(String),
 }
 
+#[derive(PartialEq)]
 enum SChar {
     Esc,
     Nchar,
 }
 
+#[derive(PartialEq)]
 enum CChar {
     Esc,
     LChar,
 }
 
 // Any ASCII Char except "
+#[derive(PartialEq)]
 enum NChar {
     NChar(char),
 }
 
 // Any ASCII Char except >
+#[derive(PartialEq)]
 enum LChar {
     LChar(char),
 }
 
+#[derive(PartialEq)]
 enum Esc {
     Alert,          // " \a "
     Backspace,      // " \b "
@@ -77,6 +90,7 @@ enum Esc {
     DoubleQuote,    // " \" "
 }
 
+#[derive(PartialEq)]
 enum Sep {
     LParen,    // '('
     RParen,    // ')'
@@ -88,6 +102,7 @@ enum Sep {
     SemiColon, // ';'
 }
 
+#[derive(PartialEq)]
 enum UnOp {
     LogicalNOT, // '!'
     BitwiseNOT, // '~'
@@ -95,7 +110,8 @@ enum UnOp {
     Pointer,    // '*'
 }
 
-enum BinOp {
+#[derive(PartialEq)]
+pub enum BinOp {
     CondEq,      // '?'
     FieldSelect, // '.'
     FieldDeref,  // "->"
@@ -120,7 +136,8 @@ enum BinOp {
     CondAsn,     // ":"
 }
 
-enum AsnOp {
+#[derive(PartialEq)]
+pub enum AsnOp {
     EqAsn,     // '='
     IncAsn,    // "+="
     DecAsn,    // "-="
@@ -134,7 +151,8 @@ enum AsnOp {
     ORAsn,     // "|="
 }
 
-enum PostOp {
-    PostInc, // "++"
-    PostDec, // "--"
+#[derive(PartialEq)]
+pub enum PostOp {
+    Inc, // "++"
+    Dec, // "--"
 }

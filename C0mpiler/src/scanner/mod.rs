@@ -8,6 +8,9 @@
 use std::fs;
 use std::io::*;
 mod token;
+use crate::scanner::token::{Token, BinOp, AsnOp, PostOp};
+// Id, Num, StrLit, ChrLit, LibLit, SChar, CChar, Sep, UnOp, BinOp, AsnOp, PostOp};
+
 
 pub fn run_file(path: String) -> Result<()> {
     if let Ok(file) = fs::read_to_string(path) {
@@ -33,30 +36,68 @@ pub fn run_prompt() -> Result<()> {
 
 // TO DO:
 // Associate line numbers and column numbers with tokens
-    // CharIndices stores index -- can this be used to derive line/col number, which can then be
-    // stored in a Token Struct?
+// CharIndices stores index -- can this be used to derive line/col number, which can then be
+// stored in a Token Struct?
 // Do we tokenize or discard spaces/newlines?
-    //  I would assume tokenizing them would work best with keeping track of line/col numbers
+//  I would assume tokenizing them would work best with keeping track of line/col numbers
 // How do we categorize keywords?
 //
 fn scan(source: String) -> Vec<Token> {
-    let mut tokens: Vec<Token> = Vec::new();
+    let mut tokens = Vec::<Token>::new();
     let mut char_indices = source.char_indices().peekable();
 
-    // let's use CharIndices to keep track of state when we need to check if a token is single or multi-character
-    // CharIndices provides peekable method to let us conditionally advance the current index if we have a multi-character token
-    // Using while let here instead of for in to avoid moving the iterator produced by char_indices
     while let Some((index, character)) = char_indices.next() {
         let token = match character {
             // match a single token
-            '+' => Token::Plus,
+            '+' => match char_indices.next() {
+                Some((_, ' ')) => Token::BinOp(BinOp::Plus),
+                Some((_, '=')) => Token::AsnOp(AsnOp::IncAsn),
+                Some((_, '+')) => Token::PostOp(PostOp::Inc),
+                _ => break, // What is the error case here? S_e? 
+            },
+            /*
+            '-' => match char_indices.peek() {
+                ' ' => Minus,
+                '=' => DecAsn,
+                '-' => Dec,
+                _ => todo!(); // What is the error case here? S_e? 
+            },
+            '*' => match char_indices.next_if_eq(&(index + 1, '=')) {
+                Some(_) => MultAsn,
+                // How can we check for associativity? Differentiate between BinOp::IntTimes &
+                // UnOp::Pointer ??
+                None => todo!(),
+            },
+            '/' => match char_indices.next_if_eq(&(index + 1, '=')) {
+                Some(_) => DivAsn,
+                None => Divide,
+            },
+            '%' => match char_indices.next_if_eq(&(index + 1, '=')) {
+                Some(_) => ModAsn,
+                None => Modulo,
+            },
+            '<' => match char_indices.peek() {
+                ' ' => Less,
+                '<' => match char_indices.peek() {
+                    ' ' => ShiftLeft,
+                    '<' => match char_indices.next_if_eq(&(index + ))
+                }
+
+            },
+            '>' => match char_indices.next_if_eq(&(index + 1, '<')) {
+                Some(_) => match char_indices.next_if_eq(&(index + 2, '=')) {
+                    Some(_) => RShiftAsn,
+                    None => RShift,
+                },
+                None => Greater,
+            },
             '=' => match char_indices.next_if_eq(&(index + 1, '=')) {
-                Some(_) => Token::EqualEqual,
-                None => Token::Equal,
+                Some(_) => Equality,
+                None => EqAsn,
             },
             '!' => match char_indices.next_if_eq(&(index + 1, '=')) {
-                Some(_) => Token::NotEqual,
-                None => Token::Invalid("!".to_string()),
+                Some(_) => ,
+                None => ,
             },
             // Checking for strings
 
@@ -78,8 +119,8 @@ fn scan(source: String) -> Vec<Token> {
                     .collect();
 
                 match last_char_matched {
-                    '"' => Token::StringLiteral(s),
-                    _ => Token::Invalid("Unterminated literal".to_string()),
+                    '"' => StrLit::StringLiteral(s),
+                    _ => ,
                 }
             }
             n if char::is_numeric(n) => {
@@ -90,37 +131,13 @@ fn scan(source: String) -> Vec<Token> {
                     .collect();
 
                 let number: u32 = s.parse::<u32>().unwrap();
-                Token::Number(number)
+                DecNum(number),    
             }
-            _ => Token::Invalid(format!("{}", character)),
         };
+        */
         tokens.push(token);
+        };
     }
     tokens
 }
 
-enum Token {
-    Plus,
-    Equal,
-    EqualEqual,
-    NotEqual,
-    Number(u32),
-    StringLiteral(String),
-    Invalid(String),
-}
-
-// identifier
-enum Id {
-
-}
-
-//
-enum Separator {
-    
-}
-
-enum UnOp{
-
-}
-
-enum 
