@@ -1,0 +1,1 @@
+/home/c/dev/projects/CMU_compilers/c0mpiler/target/debug/c0mpiler: /home/c/dev/projects/CMU_compilers/c0mpiler/src/main.rs /home/c/dev/projects/CMU_compilers/c0mpiler/src/scanner/mod.rs /home/c/dev/projects/CMU_compilers/c0mpiler/src/scanner/token.rs
