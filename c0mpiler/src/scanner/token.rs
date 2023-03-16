@@ -1,4 +1,5 @@
-// #![allow(dead_code)]
+#![allow(dead_code)]
+// Enumerate keywords?
 #[derive(PartialEq, Debug)]
 pub enum Token {
     Id(Id),
@@ -14,22 +15,49 @@ pub enum Token {
     BinOp(BinOp),
     AsnOp(AsnOp),
     PostOp(PostOp),
+    Keyword(Keyword),
+    Esc(Esc),
+}
+
+#[derive(PartialEq, Debug)]
+pub enum Keyword {
+    Int,
+    Bool,
+    String,
+    Char,
+    Void,
+    Struct,
+    Typedef,
+    If,
+    Else,
+    While,
+    For,
+    Continue,
+    Break,
+    Return,
+    Assert,
+    Error,
+    True,
+    False,
+    Null,
+    Alloc,
+    AllocArray,
 }
 
 #[derive(PartialEq, Debug)]
 pub enum Id {
-    Identifier(String),
+    Id(String),
 }
 
 #[derive(PartialEq, Debug)]
 pub enum Num {
-    DecNum,
+    DecNum(DecNum),
     HexNum,
 }
 
 #[derive(PartialEq, Debug)]
 pub enum DecNum {
-    DecNumber(u32),
+    DecNum(u32),
 }
 
 #[derive(PartialEq, Debug)]

@@ -1,7 +1,6 @@
 mod scanner;
 
 use clap::{arg, Command};
-use scanner::token::*;
 
 fn main() {
     let matches = Command::new("C0mpiler")
