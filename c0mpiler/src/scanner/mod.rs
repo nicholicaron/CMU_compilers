@@ -105,17 +105,19 @@ pub fn scan(source: String) -> Vec<Token> {
                     char_indices.next();
                     Token::AsnOp(AsnOp::MultAsn)
                 }
-                Some(_) => {
+                _ => {
                     match tokens.last() {
                         // Should be preceded by a number OR an identifier that resolves to a number
                         // "num *"
-                        Some(Token::Num(_)) | Some(Token::Id(_)) => Token::BinOp(BinOp::IntTimes),
+                        Some(Token::Num(_)) | Some(Token::Id(_)) => {
+                            println!("{:?}", tokens.last().unwrap());
+                            Token::BinOp(BinOp::IntTimes)
+                        }
                         // pointer initialization: "<keyword::type> *"
                         // pointer dereference: "*<identifier>"
                         _ => Token::UnOp(UnOp::Pointer),
                     }
                 }
-                _ => continue,
             },
             // NOTE: We are not currently validating previous token for division operator, as we
             // did for disambiguating the multiplication operator and pointers
@@ -317,16 +319,22 @@ pub fn scan(source: String) -> Vec<Token> {
                 }
             }
             c if char::is_alphabetic(c) => {
-                let mut s: String = c.to_string();
-                let rest_of_string: String = char_indices
-                    .by_ref()
-                    .take_while(|(_index, character)| {
-                        (char::is_alphanumeric(*character) || *character == '_')
-                            && *character != ' '
-                    })
-                    .map(|(_index, character)| character)
-                    .collect();
-                s.push_str(&rest_of_string);
+                let mut s = c.to_string();
+                let mut stop_flag = false;
+                while !stop_flag {
+                    if let Some((_index, next_char)) = char_indices.peek() {
+                        if (next_char.is_alphanumeric() || *next_char == '_') && *next_char != ' ' {
+                            if let Some((_index, next_char)) = char_indices.next() {
+                                s.push(next_char);
+                            }
+                        } else {
+                            stop_flag = true;
+                        }
+                    } else {
+                        stop_flag = true;
+                    }
+                }
+
                 match s.as_str() {
                     "int" => Token::Keyword(Keyword::Int),
                     "bool" => Token::Keyword(Keyword::Bool),
@@ -355,12 +363,20 @@ pub fn scan(source: String) -> Vec<Token> {
             // How to handle hexnums?
             n if char::is_numeric(n) => {
                 let mut num: String = n.to_string();
-                let rest_of_num: String = char_indices
-                    .by_ref()
-                    .take_while(|(_index, character)| char::is_numeric(*character))
-                    .map(|(_index, character)| character)
-                    .collect();
-                num.push_str(&rest_of_num);
+                let mut stop_flag = false;
+                while !stop_flag {
+                    if let Some((_index, next_digit)) = char_indices.peek() {
+                        if next_digit.is_digit(10) {
+                            if let Some((_index, next_digit)) = char_indices.next() {
+                                num.push(next_digit);
+                            }
+                        } else {
+                            stop_flag = true;
+                        }
+                    } else {
+                        stop_flag = true;
+                    }
+                }
 
                 let num: u32 = num.parse::<u32>().unwrap();
                 Token::Num(Num::DecNum(DecNum::DecNum(num)))
@@ -380,14 +396,29 @@ mod tests {
     fn Id() {
         let Hello = vec![Token::Id(Id::Id("hello".to_string()))];
         let World = vec![Token::Id(Id::Id("world".to_string()))];
-        let Hello_World = vec![
+        let HelloWorld = vec![
             Token::Id(Id::Id("hello".to_string())),
             Token::Id(Id::Id("world".to_string())),
         ];
 
         assert_eq!(scan("hello".to_string()), Hello);
         assert_eq!(scan("world".to_string()), World);
-        assert_eq!(scan("hello world".to_string()), Hello_World);
+        assert_eq!(scan("hello world".to_string()), HelloWorld);
+    }
+
+    #[test]
+    fn StrLit() {
+        let Hello = vec![Token::StrLit(StrLit::StringLiteral("hello".to_string()))];
+        let World = vec![Token::StrLit(StrLit::StringLiteral("world!".to_string()))];
+        let HelloWorld = vec![Token::StrLit(StrLit::StringLiteral(
+            "hello world!".to_string(),
+        ))];
+        let HelloNum = vec![Token::StrLit(StrLit::StringLiteral("hello 42".to_string()))];
+
+        assert_eq!(scan("\"hello\"".to_string()), Hello);
+        assert_eq!(scan("\"world!\"".to_string()), World);
+        assert_eq!(scan("\"hello world!\"".to_string()), HelloWorld);
+        assert_eq!(scan("\"hello 42\"".to_string()), HelloNum);
     }
 
     #[test]
@@ -466,13 +497,13 @@ mod tests {
         assert_eq!(scan("\\a".to_string()), Alert);
         assert_eq!(scan("\\b".to_string()), Backspace);
         assert_eq!(scan("\\f".to_string()), FormfeedPgBrk);
-        assert_eq!(scan("\n".to_string()), Newline);
-        assert_eq!(scan("\r".to_string()), CarriageReturn);
-        assert_eq!(scan("\t".to_string()), HorizontalTab);
+        assert_eq!(scan("\\n".to_string()), Newline);
+        assert_eq!(scan("\\r".to_string()), CarriageReturn);
+        assert_eq!(scan("\\t".to_string()), HorizontalTab);
         assert_eq!(scan("\\v".to_string()), VerticalTab);
-        assert_eq!(scan("\\".to_string()), Backslash);
-        assert_eq!(scan("\'".to_string()), Apostrophe);
-        assert_eq!(scan(" \" ".to_string()), DoubleQuote);
+        assert_eq!(scan("\\\\".to_string()), Backslash);
+        assert_eq!(scan("\\'".to_string()), Apostrophe);
+        assert_eq!(scan("\\\" ".to_string()), DoubleQuote);
     }
 
     #[test]
@@ -518,7 +549,7 @@ mod tests {
         let FieldSelect = vec![Token::BinOp(BinOp::FieldSelect)];
         let FieldDeref = vec![Token::BinOp(BinOp::FieldDeref)];
         let IntTimes = vec![
-            Token::Num(Num::DecNum(DecNum::DecNum(1))),
+            Token::Num(Num::DecNum(DecNum::DecNum(12))),
             Token::BinOp(BinOp::IntTimes),
         ];
         let Divide = vec![Token::BinOp(BinOp::Divide)];
@@ -546,7 +577,7 @@ mod tests {
         assert_eq!(scan("?".to_string()), CondEq);
         assert_eq!(scan(".".to_string()), FieldSelect);
         assert_eq!(scan("->".to_string()), FieldDeref);
-        assert_eq!(scan("1 *".to_string()), IntTimes);
+        assert_eq!(scan("12 *".to_string()), IntTimes);
         assert_eq!(scan("/".to_string()), Divide);
         assert_eq!(scan("%".to_string()), Modulo);
         assert_eq!(scan("+".to_string()), Plus);
@@ -603,7 +634,6 @@ mod tests {
         assert_eq!(scan("--".to_string()), Dec);
     }
 
-    /*
     #[test]
     fn combination_w_spaces() {
         let res1 = vec![
@@ -628,9 +658,44 @@ mod tests {
             Token::AsnOp(AsnOp::ModAsn),
         ];
 
+        let program = vec![
+            Token::Keyword(Keyword::Int),
+            Token::Id(Id::Id("main".to_string())),
+            Token::Sep(Sep::LParen),
+            Token::Sep(Sep::RParen),
+            Token::Sep(Sep::LCurly),
+            Token::Id(Id::Id("printf".to_string())),
+            Token::Sep(Sep::LParen),
+            Token::StrLit(StrLit::StringLiteral("Hello world!".to_string())),
+            Token::Sep(Sep::RParen),
+            Token::Sep(Sep::SemiColon),
+            Token::Keyword(Keyword::Bool),
+            Token::Id(Id::Id("this_works".to_string())),
+            Token::AsnOp(AsnOp::EqAsn),
+            Token::Keyword(Keyword::True),
+            Token::Sep(Sep::SemiColon),
+            Token::Keyword(Keyword::Return),
+            Token::Num(Num::DecNum(DecNum::DecNum(0))),
+            Token::Sep(Sep::SemiColon),
+            Token::Sep(Sep::RCurly),
+        ];
+
         assert_eq!(
-            scan("? -> % << <<= > != == = || += ^= ++ } \r [ ; ~ %=".to_string()),
+            scan("? -> % << <<= > != == = || += ^= ++ } \\r [ ; ~ %=".to_string()),
             res1
+        );
+        // OFF BY ONE ERROR FROM RECOGNIZING Strings/Nums is throwing us off here
+        // Trouble shoot further
+        assert_eq!(
+            scan(
+                r#"int main() {
+                    printf("Hello world!");
+                    bool this_works = true;
+                    return 0;
+                }"#
+                .to_string()
+            ),
+            program
         );
     }
 
@@ -658,7 +723,6 @@ mod tests {
             Token::AsnOp(AsnOp::ModAsn),
         ];
 
-        assert_eq!(scan("?->%<<<<=>!====||+=^=++}\r[;~%=".to_string()), res1);
+        assert_eq!(scan("?->%<<<<=>!====||+=^=++}\\r[;~%=".to_string()), res1);
     }
-    */
 }
