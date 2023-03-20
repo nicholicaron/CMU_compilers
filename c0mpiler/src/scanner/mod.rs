@@ -322,15 +322,20 @@ pub fn scan(source: String) -> Vec<Token> {
                 let mut s = c.to_string();
                 let mut stop_flag = false;
                 while !stop_flag {
+                    // check before consuming
                     if let Some((_index, next_char)) = char_indices.peek() {
                         if (next_char.is_alphanumeric() || *next_char == '_') && *next_char != ' ' {
+                            // condition is true, so we are good to consume next element
                             if let Some((_index, next_char)) = char_indices.next() {
+                                // concatenate character to string
                                 s.push(next_char);
                             }
                         } else {
+                            // condition is false, don't consume next element and stop looping
                             stop_flag = true;
                         }
                     } else {
+                        // No subsequent character (peek returns None) so stop looping
                         stop_flag = true;
                     }
                 }

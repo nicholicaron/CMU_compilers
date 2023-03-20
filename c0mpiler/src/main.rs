@@ -1,3 +1,4 @@
+mod error;
 mod scanner;
 
 use clap::{arg, Command};
