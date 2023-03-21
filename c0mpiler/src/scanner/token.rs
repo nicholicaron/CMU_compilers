@@ -52,7 +52,7 @@ pub enum Id {
 #[derive(PartialEq, Debug)]
 pub enum Num {
     DecNum(DecNum),
-    HexNum,
+    HexNum(HexNum),
 }
 
 #[derive(PartialEq, Debug)]
@@ -63,7 +63,7 @@ pub enum DecNum {
 #[derive(PartialEq, Debug)]
 pub enum HexNum {
     // implicit conversion from base-16 to decimal
-    HexNumber(u32),
+    HexNum(u32),
 }
 
 #[derive(PartialEq, Debug)]

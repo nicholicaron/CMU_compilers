@@ -4,8 +4,8 @@ use std::fs;
 use std::io::*;
 pub mod token;
 use crate::scanner::token::{
-    AsnOp, BinOp, CChar, ChrLit, DecNum, Esc, Id, Keyword, LibLit, Num, PostOp, SChar, Sep, StrLit,
-    Token, UnOp,
+    AsnOp, BinOp, CChar, ChrLit, DecNum, Esc, HexNum, Id, Keyword, LibLit, Num, PostOp, SChar, Sep,
+    StrLit, Token, UnOp,
 };
 
 pub fn run_file(path: String) -> Result<()> {
@@ -43,19 +43,6 @@ pub fn scan(source: String) -> Vec<Token> {
     let mut char_indices = source.char_indices().peekable();
 
     while let Some((_index, character)) = char_indices.next() {
-        //
-        // Need to handle corner cases around + and -
-        // e.g. identifier-name should not resolve to BinOp Minus and should be part of identifier
-        // name
-        // Is this a matter of precedence? Checking for Identifiers befor BinOps
-        //      Handled by the parser?
-        // Also, is the wildcard follow up resolving to BinOp::Minus a safe conclusion?
-        //
-        // Additionally, where is it appropriate do disambiguate between next, next_if_eq, and
-        // peek?
-        // Generally sticking with next() for now
-        //      - After Consuming one character, and conditionally checking next char, use next_if()
-        //      to avoid consuming
         //
         // Should token be wrapped in Option then unwrapped?
         //
@@ -251,7 +238,8 @@ pub fn scan(source: String) -> Vec<Token> {
             ']' => Token::Sep(Sep::RBracket),
             ',' => Token::Sep(Sep::Comma),
             ';' => Token::Sep(Sep::SemiColon),
-            // Esc Sequences: Note, we have to escape the backslash character so '\\' evals to '\'
+            // Explicit Esc Sequences (written by source author, written as two characters)
+            // Note, we have to escape the backslash character so '\\' evals to '\'
             '\\' => match char_indices.peek() {
                 Some((_, 'a')) => {
                     char_indices.next();
@@ -296,12 +284,7 @@ pub fn scan(source: String) -> Vec<Token> {
                 _ => continue,
             },
             // Checking for strings
-
-            // take_while method conditionally consumes and returns elements of an iterator as long as its predicate function evaluates to true
-            // when the predicate function evals to false, the iterator terminates
-            // take_while takes possession of the original iterator, so we will instead borrow it mutable via by_ref()
-            // elements consumed by take_while are also removed from original iterator so we don't have to worry about double counting
-            '"' => {
+            '\"' => {
                 let mut last_char_matched: char = '"';
                 let s: String = char_indices
                     .by_ref()
@@ -318,75 +301,127 @@ pub fn scan(source: String) -> Vec<Token> {
                     _ => panic!(),
                 }
             }
-            c if char::is_alphabetic(c) => {
-                let mut s = c.to_string();
-                let mut stop_flag = false;
-                while !stop_flag {
-                    // check before consuming
-                    if let Some((_index, next_char)) = char_indices.peek() {
-                        if (next_char.is_alphanumeric() || *next_char == '_') && *next_char != ' ' {
-                            // condition is true, so we are good to consume next element
-                            if let Some((_index, next_char)) = char_indices.next() {
-                                // concatenate character to string
-                                s.push(next_char);
+            '\'' => match char_indices.peek() {
+                Some((outer_index, next_char)) => {
+                    // How to differentiate from NChar and LChar -- Lots of overlap
+                    if next_char.is_ascii() {
+                        // cannot access next_char after calling next() [borrowing char_indices mutably]
+                        let c = next_char.clone();
+                        char_indices.next();
+                        // should be followed by closing single quote
+                        match char_indices.peek() {
+                                Some((_, '\'')) => {
+                                    char_indices.next();
+                                    Token::ChrLit(ChrLit::CharacterLiteral(c))
+                                },
+                                Some((inner_index, _)) => panic!("Error scanning character literal at index {} -- No closing single quote found", inner_index),
+                                None => panic!("Error scanning character literal -- End of file reached"),
                             }
-                        } else {
-                            // condition is false, don't consume next element and stop looping
-                            stop_flag = true;
-                        }
                     } else {
-                        // No subsequent character (peek returns None) so stop looping
-                        stop_flag = true;
+                        panic!("Error scanning character literal at index {} -- Non-ASCII character encountered", outer_index);
                     }
                 }
-
-                match s.as_str() {
-                    "int" => Token::Keyword(Keyword::Int),
-                    "bool" => Token::Keyword(Keyword::Bool),
-                    "string" => Token::Keyword(Keyword::String),
-                    "char" => Token::Keyword(Keyword::Char),
-                    "void" => Token::Keyword(Keyword::Void),
-                    "struct" => Token::Keyword(Keyword::Struct),
-                    "typedef" => Token::Keyword(Keyword::Typedef),
-                    "if" => Token::Keyword(Keyword::If),
-                    "else" => Token::Keyword(Keyword::Else),
-                    "while" => Token::Keyword(Keyword::While),
-                    "for" => Token::Keyword(Keyword::For),
-                    "continue" => Token::Keyword(Keyword::Continue),
-                    "break" => Token::Keyword(Keyword::Break),
-                    "return" => Token::Keyword(Keyword::Return),
-                    "assert" => Token::Keyword(Keyword::Assert),
-                    "error" => Token::Keyword(Keyword::Error),
-                    "true" => Token::Keyword(Keyword::True),
-                    "false" => Token::Keyword(Keyword::False),
-                    "NULL" => Token::Keyword(Keyword::Null),
-                    "alloc" => Token::Keyword(Keyword::Alloc),
-                    "alloc_array" => Token::Keyword(Keyword::AllocArray),
-                    _ => Token::Id(Id::Id(s)),
-                }
-            }
-            // How to handle hexnums?
-            n if char::is_numeric(n) => {
-                let mut num: String = n.to_string();
+                _ => panic!("Error scanning character literal -- End of file reached"),
+            },
+            _ => {
+                let mut s = character.clone().to_string();
                 let mut stop_flag = false;
-                while !stop_flag {
-                    if let Some((_index, next_digit)) = char_indices.peek() {
-                        if next_digit.is_digit(10) {
-                            if let Some((_index, next_digit)) = char_indices.next() {
-                                num.push(next_digit);
+                if character.is_alphabetic() {
+                    while !stop_flag {
+                        // check before consuming
+                        if let Some((_index, next_char)) = char_indices.peek() {
+                            if (next_char.is_alphanumeric() || *next_char == '_')
+                                && *next_char != ' '
+                            {
+                                // condition is true, so we are good to consume next element
+                                if let Some((_index, next_char)) = char_indices.next() {
+                                    // concatenate character to string
+                                    s.push(next_char);
+                                }
+                            } else {
+                                // condition is false, don't consume next element and stop looping
+                                stop_flag = true;
+                            }
+                        } else {
+                            // No subsequent character (peek returns None) so stop looping
+                            stop_flag = true;
+                        }
+                    }
+                    match s.as_str() {
+                        "int" => Token::Keyword(Keyword::Int),
+                        "bool" => Token::Keyword(Keyword::Bool),
+                        "string" => Token::Keyword(Keyword::String),
+                        "char" => Token::Keyword(Keyword::Char),
+                        "void" => Token::Keyword(Keyword::Void),
+                        "struct" => Token::Keyword(Keyword::Struct),
+                        "typedef" => Token::Keyword(Keyword::Typedef),
+                        "if" => Token::Keyword(Keyword::If),
+                        "else" => Token::Keyword(Keyword::Else),
+                        "while" => Token::Keyword(Keyword::While),
+                        "for" => Token::Keyword(Keyword::For),
+                        "continue" => Token::Keyword(Keyword::Continue),
+                        "break" => Token::Keyword(Keyword::Break),
+                        "return" => Token::Keyword(Keyword::Return),
+                        "assert" => Token::Keyword(Keyword::Assert),
+                        "error" => Token::Keyword(Keyword::Error),
+                        "true" => Token::Keyword(Keyword::True),
+                        "false" => Token::Keyword(Keyword::False),
+                        "NULL" => Token::Keyword(Keyword::Null),
+                        "alloc" => Token::Keyword(Keyword::Alloc),
+                        "alloc_array" => Token::Keyword(Keyword::AllocArray),
+                        _ => Token::Id(Id::Id(s)),
+                    }
+                } else if character.is_numeric() {
+                    let mut hex_flag = false;
+                    while !stop_flag {
+                        if let Some((_index, next_digit)) = char_indices.peek() {
+                            // decimal
+                            if next_digit.is_digit(10) {
+                                if let Some((_index, next_digit)) = char_indices.next() {
+                                    s.push(next_digit);
+                                }
+                            } else if next_digit.is_digit(16) {
+                                hex_flag = true;
+                                if let Some((_index, next_digit)) = char_indices.next() {
+                                    s.push(next_digit);
+                                }
+                            } else {
+                                stop_flag = true;
                             }
                         } else {
                             stop_flag = true;
                         }
+                    }
+
+                    let radix: u32;
+                    if hex_flag {
+                        radix = 16;
                     } else {
-                        stop_flag = true;
+                        radix = 10;
+                    }
+
+                    let num = match u32::from_str_radix(&s, radix) {
+                        Ok(num) => num,
+                        Err(e) => panic!("Error parsing num as base-{:?}: {:?}", radix, e),
+                    };
+
+                    if hex_flag {
+                        Token::Num(Num::HexNum(HexNum::HexNum(num)))
+                    } else {
+                        Token::Num(Num::DecNum(DecNum::DecNum(num)))
+                    }
+                } else if character == ' ' {
+                    continue;
+                } else {
+                    // Implicit Esc Sequences (represented in unicode as a single character)
+                    // For now, I think we only need to handle newlines, may add as necessary
+                    match character {
+                        // '\n'
+                        '\u{0A}' => Token::Esc(Esc::Newline),
+                        _ => panic!("Unrecognizable character: {:?}", character),
                     }
                 }
-
-                let num: u32 = num.parse::<u32>().unwrap();
-                Token::Num(Num::DecNum(DecNum::DecNum(num)))
             }
-            _ => continue,
         };
         tokens.push(token);
     }
@@ -484,6 +519,12 @@ mod tests {
 
         assert_eq!(scan("42".to_string()), answer_to_universe);
         assert_eq!(scan("1 23 4567".to_string()), multiple_numbers);
+    }
+
+    #[test]
+    fn HexNum() {
+        let answer_to_universe = vec![Token::Num(Num::HexNum(HexNum::HexNum(42)))];
+        assert_eq!(scan("2A".to_string()), answer_to_universe);
     }
 
     #[test]
@@ -669,19 +710,49 @@ mod tests {
             Token::Sep(Sep::LParen),
             Token::Sep(Sep::RParen),
             Token::Sep(Sep::LCurly),
+            Token::Esc(Esc::Newline),
             Token::Id(Id::Id("printf".to_string())),
             Token::Sep(Sep::LParen),
             Token::StrLit(StrLit::StringLiteral("Hello world!".to_string())),
             Token::Sep(Sep::RParen),
             Token::Sep(Sep::SemiColon),
+            Token::Esc(Esc::Newline),
             Token::Keyword(Keyword::Bool),
             Token::Id(Id::Id("this_works".to_string())),
             Token::AsnOp(AsnOp::EqAsn),
             Token::Keyword(Keyword::True),
             Token::Sep(Sep::SemiColon),
+            Token::Esc(Esc::Newline),
             Token::Keyword(Keyword::Return),
             Token::Num(Num::DecNum(DecNum::DecNum(0))),
             Token::Sep(Sep::SemiColon),
+            Token::Esc(Esc::Newline),
+            Token::Sep(Sep::RCurly),
+        ];
+
+        let program_explicit_newline = vec![
+            Token::Keyword(Keyword::Int),
+            Token::Id(Id::Id("main".to_string())),
+            Token::Sep(Sep::LParen),
+            Token::Sep(Sep::RParen),
+            Token::Sep(Sep::LCurly),
+            Token::Esc(Esc::Newline),
+            Token::Id(Id::Id("printf".to_string())),
+            Token::Sep(Sep::LParen),
+            Token::StrLit(StrLit::StringLiteral("Hello world!".to_string())),
+            Token::Sep(Sep::RParen),
+            Token::Sep(Sep::SemiColon),
+            Token::Esc(Esc::Newline),
+            Token::Keyword(Keyword::Bool),
+            Token::Id(Id::Id("this_works".to_string())),
+            Token::AsnOp(AsnOp::EqAsn),
+            Token::Keyword(Keyword::True),
+            Token::Sep(Sep::SemiColon),
+            Token::Esc(Esc::Newline),
+            Token::Keyword(Keyword::Return),
+            Token::Num(Num::DecNum(DecNum::DecNum(0))),
+            Token::Sep(Sep::SemiColon),
+            Token::Esc(Esc::Newline),
             Token::Sep(Sep::RCurly),
         ];
 
@@ -689,18 +760,23 @@ mod tests {
             scan("? -> % << <<= > != == = || += ^= ++ } \\r [ ; ~ %=".to_string()),
             res1
         );
-        // OFF BY ONE ERROR FROM RECOGNIZING Strings/Nums is throwing us off here
-        // Trouble shoot further
         assert_eq!(
             scan(
-                r#"int main() {
-                    printf("Hello world!");
+                "int main() {
+                    printf(\"Hello world!\");
                     bool this_works = true;
                     return 0;
-                }"#
+                }"
                 .to_string()
             ),
             program
+        );
+        assert_eq!(
+            scan(
+                r#"int main() {\nprintf("Hello world!");\nbool this_works = true;\nreturn 0;\n}"#
+                    .to_string()
+            ),
+            program_explicit_newline
         );
     }
 
