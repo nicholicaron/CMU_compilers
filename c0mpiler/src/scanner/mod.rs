@@ -283,6 +283,13 @@ pub fn scan(source: String) -> Vec<Token> {
                 }
                 _ => continue,
             },
+            // Implicit Esc Sequences (represented in unicode as a single character)
+            // For now, I think we only need to handle newlines, may add as necessary
+            // '\n'
+            '\u{0A}' => {
+                char_indices.next();
+                Token::Esc(Esc::Newline)
+            }
             // Checking for strings
             '\"' => {
                 let mut last_char_matched: char = '"';
@@ -323,6 +330,7 @@ pub fn scan(source: String) -> Vec<Token> {
                 }
                 _ => panic!("Error scanning character literal -- End of file reached"),
             },
+            ' ' => continue,
             _ => {
                 let mut s = character.clone().to_string();
                 let mut stop_flag = false;
@@ -410,16 +418,8 @@ pub fn scan(source: String) -> Vec<Token> {
                     } else {
                         Token::Num(Num::DecNum(DecNum::DecNum(num)))
                     }
-                } else if character == ' ' {
-                    continue;
                 } else {
-                    // Implicit Esc Sequences (represented in unicode as a single character)
-                    // For now, I think we only need to handle newlines, may add as necessary
-                    match character {
-                        // '\n'
-                        '\u{0A}' => Token::Esc(Esc::Newline),
-                        _ => panic!("Unrecognizable character: {:?}", character),
-                    }
+                    panic!("Unrecognizable character: {}", character);
                 }
             }
         };
